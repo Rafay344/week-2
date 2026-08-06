@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin · Excel Import Panel</title>
+
+    <!-- SheetJS (xlsx) from CDN -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js">
+    </script>
+
+    <style>
+        /* ---------- Reset & Base ---------- */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: #cefd8e;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1rem;
+            color: #1e293b;
+        }
+
+        .card {
+            max-width: 1200px;
+            width: 100%;
+            background: #71e7f9;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.04);
+            padding: 2rem 2.5rem 2.5rem;
+            transition: box-shadow 0.2s;
+        }
+
+        /* ---------- Header ---------- */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid #e9edf4;
+        }
+
+        .header h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header h1 span {
+            background: #2563eb;
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 0.2rem 0.7rem;
+            border-radius: 40px;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-env {
+            font-size: 0.75rem;
+            background: #eef2ff;
+            color: #2563eb;
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+            font-weight: 500;
+        }
+
+        /* ---------- Upload Zone ---------- */
+        .upload-zone {
+            background: #fafbff;
+            border: 2px dashed #d0d9e8;
+            border-radius: 18px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            transition: border-color 0.25s, background 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .upload-zone:hover {
+            border-color: #2563eb;
+            background: #f5f8ff;
+        }
+
+        .upload-zone.dragover {
+            border-color: #2563eb;
+            background: #eef4ff;
+        }
+
+        .upload-zone .icon {
+            font-size: 2.8rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .upload-zone h3 {
+            font-weight: 500;
+            font-size: 1.1rem;
+            color: #0f172a;
+        }
+
+        .upload-zone p {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 0.3rem;
+        }
+
+        .upload-zone .formats {
+            display: inline-block;
+            margin-top: 0.75rem;
+            background: #e9edf4;
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #334155;
+            letter-spacing: 0.3px;
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* ---------- File info bar ---------- */
+        .file-info {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 1.25rem;
+            padding: 0.8rem 1.2rem;
+            background: #f1f5f9;
+            border-radius: 12px;
+            font-size: 0.9rem;
+        }
+
+        .file-info.show {
+            display: flex;
+        }
+
+        .file-info .name {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .file-info .name .ext {
+            text-transform: uppercase;
+            background: #2563eb;
+            color: #fff;
+            font-size: 0.6rem;
+            padding: 0.15rem 0.6rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .file-info .actions {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        /* ---------- Buttons ---------- */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-family: inherit;
+            font-weight: 500;
+            font-size: 0.9rem;
+            padding: 0.5rem 1.2rem;
+            border-radius: 40px;
+            border: none;
+            background: #e9edf4;
+            color: #1e293b;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: #dce2ec;
+        }
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+        .btn-primary:hover {
+            background: #1d4ed8;
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.3);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            box-shadow: none;
+        }
+
+        .btn-success {
+            background: #0b8a4b;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(11, 138, 75, 0.25);
+        }
+        .btn-success:hover {
+            background: #0a7640;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid #d0d9e8;
+        }
+        .btn-outline:hover {
+            background: #f1f5f9;
+            border-color: #b0bed4;
+        }
+
+        .btn-danger-outline {
+            background: transparent;
+            border: 1.5px solid #fca5a5;
+            color: #b91c1c;
+        }
+        .btn-danger-outline:hover {
+            background: #fef2f2;
+            border-color: #f87171;
+        }
+
+        /* ---------- Stats bar ---------- */
+        .stats-bar {
+            display: none;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+            padding: 0.8rem 1.2rem;
+            background: #f8fafc;
+            border-radius: 14px;
+            border: 1px solid #e9edf4;
+        }
+
+        .stats-bar.show {
+            display: flex;
+        }
+
+        .stats-bar .stat {
+            display: flex;
+            align-items: baseline;
+            gap: 0.3rem;
+            font-size: 0.9rem;
+        }
+
+        .stats-bar .stat strong {
+            font-size: 1.2rem;
+            color: #0f172a;
+        }
+
+        .stats-bar .stat .label {
+            color: #64748b;
+        }
+
+        .stats-bar .stat .highlight {
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        /* ---------- Table wrapper ---------- */
+        .table-wrapper {
+            margin-top: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid #e9edf4;
+            overflow: auto;
+            max-height: 480px;
+            background: #ffffff;
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.01);
+        }
+
+        .table-wrapper table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            min-width: 600px;
+        }
+
+        .table-wrapper thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .table-wrapper th {
+            background: #f1f5f9;
+            text-align: left;
+            padding: 0.8rem 1rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #475569;
+            border-bottom: 2px solid #dce2ec;
+            white-space: nowrap;
+        }
+
+        .table-wrapper td {
+            padding: 0.7rem 1rem;
+            border-bottom: 1px solid #edf2f7;
+            vertical-align: middle;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .table-wrapper tbody tr:hover {
+            background: #fafbff;
+        }
+
+        .table-wrapper tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* validation status */
+        .status-badge {
+            display: inline-block;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.15rem 0.6rem;
+            border-radius: 40px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .status-badge.valid {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-badge.invalid {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-badge.missing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .cell-missing {
+            color: #b91c1c;
+            font-weight: 500;
+        }
+
+        /* ---------- Summary / Success ---------- */
+        .summary-box {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1.2rem 1.5rem;
+            border-radius: 16px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #14532d;
+            align-items: flex-start;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .summary-box.show {
+            display: flex;
+        }
+
+        .summary-box .icon-big {
+            font-size: 1.8rem;
+            line-height: 1;
+        }
+
+        .summary-box .content {
+            flex: 1;
+        }
+
+        .summary-box .content h4 {
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+
+        .summary-box .content p {
+            font-size: 0.9rem;
+            opacity: 0.85;
+            margin-top: 0.2rem;
+        }
+
+        .summary-box .content .detail-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.2rem 2rem;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .summary-box .content .detail-list span {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        /* ---------- Responsive ---------- */
+        @media (max-width: 700px) {
+            .card {
+                padding: 1.5rem 1rem;
+            }
+            .header h1 {
+                font-size: 1.2rem;
+            }
+            .upload-zone {
+                padding: 1.5rem 1rem;
+            }
+            .upload-zone .icon {
+                font-size: 2rem;
+            }
+            .stats-bar {
+                gap: 0.8rem;
+            }
+            .summary-box {
+                flex-direction: column;
+            }
+        }
+
+        /* ---------- Utilities ---------- */
+        .text-muted {
+            color: #94a3b8;
+        }
+        .mt-1 {
+            margin-top: 0.5rem;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .flex-center {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+
+       
+        <div class="header">
+            <h1>
+                📋 Excel Import
+                <span>Admin</span>
+            </h1>
+            <div class="badge-env">⚡ mock save · front-end only</div>
+        </div>
+
+   
+        <div class="upload-zone" id="uploadZone">
+            <span class="icon">📂</span>
+            <h3>Drop your .xlsx or .csv file here</h3>
+            <p>or click to browse</p>
+            <div class="formats">.xlsx &nbsp;·&nbsp; .csv</div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+        </div>
+
+       
+        <div class="file-info" id="fileInfo">
+            <div class="name">
+                <span id="fileName">file.xlsx</span>
+                <span class="ext" id="fileExt">XLSX</span>
+                <span style="color:#64748b;font-weight:400;font-size:0.8rem;" id="fileSize"></span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-danger-outline" id="clearFileBtn">✕ Clear</button>
+                <button class="btn btn-primary" id="importBtn" disabled>
+                    ⬆ Import &amp; Preview
+                </button>
+            </div>
+        </div>
+
+      
+        <div class="stats-bar" id="statsBar">
+            <div class="stat">
+                <strong id="totalRows">0</strong>
+                <span class="label">total rows</span>
+            </div>
+            <div class="stat">
+                <span class="highlight" id="validRows">0</span>
+                <span class="label">valid</span>
+            </div>
+            <div class="stat">
+                <span style="color:#b91c1c;" id="invalidRows">0</span>
+                <span class="label">with issues</span>
+            </div>
+            <div class="stat" style="margin-left:auto;">
+                <span style="color:#2563eb;">▼</span>
+                <span class="label">required: <strong>Name</strong> · <strong>Category</strong> · <strong>City</strong></span>
+            </div>
+        </div>
+
+       
+        <div class="table-wrapper" id="tableWrapper">
+            <table>
+                <thead id="tableHead">
+                   
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="10" style="text-align:center;color:#94a3b8;padding:2.5rem 1rem;">
+                            Upload a file to preview rows
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        
+        <div class="summary-box" id="summaryBox">
+            <div class="icon-big">✅</div>
+            <div class="content">
+                <h4 id="summaryTitle">Import complete!</h4>
+                <p id="summaryDesc">Your business list has been processed.</p>
+                <div class="detail-list" id="summaryDetails">
+                    <span>📊 <strong id="summaryTotal">0</strong> total</span>
+                    <span>✅ <strong id="summaryValid">0</strong> valid</span>
+                    <span>⚠️ <strong id="summaryInvalid">0</strong> with issues</span>
+                </div>
+            </div>
+            <button class="btn btn-outline" id="dismissSummaryBtn" style="flex-shrink:0;">Dismiss</button>
+        </div>
+
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+       
+            const fileInput = document.getElementById('fileInput');
+            const uploadZone = document.getElementById('uploadZone');
+            const fileInfo = document.getElementById('fileInfo');
+            const fileName = document.getElementById('fileName');
+            const fileExt = document.getElementById('fileExt');
+            const fileSize = document.getElementById('fileSize');
+            const clearFileBtn = document.getElementById('clearFileBtn');
+            const importBtn = document.getElementById('importBtn');
+
+            const tableHead = document.getElementById('tableHead');
+            const tableBody = document.getElementById('tableBody');
+            const statsBar = document.getElementById('statsBar');
+            const totalRows = document.getElementById('totalRows');
+            const validRows = document.getElementById('validRows');
+            const invalidRows = document.getElementById('invalidRows');
+
+            const summaryBox = document.getElementById('summaryBox');
+            const summaryTitle = document.getElementById('summaryTitle');
+            const summaryDesc = document.getElementById('summaryDesc');
+            const summaryTotal = document.getElementById('summaryTotal');
+            const summaryValid = document.getElementById('summaryValid');
+            const summaryInvalid = document.getElementById('summaryInvalid');
+            const dismissSummaryBtn = document.getElementById('dismissSummaryBtn');
+
+           
+            let currentFile = null; 
+            let parsedData = []; 
+            let headers = [];
+
+            
+            const REQUIRED = ['Name', 'Category', 'City'];
+
+            
+            function normalize(str) {
+                return str.trim().toLowerCase();
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / 1048576).toFixed(1) + ' MB';
+            }
+
+            
+            function renderTable(data, headersList) {
+               
+                let theadHtml = '<tr>';
+               
+                theadHtml += '<th style="width:90px;">Status</th>';
+                headersList.forEach(h => {
+                    const isReq = REQUIRED.some(r => normalize(r) === normalize(h));
+                    theadHtml += `<th>${h} ${isReq ? '⦿' : ''}</th>`;
+                });
+                theadHtml += '</tr>';
+                tableHead.innerHTML = theadHtml;
+
+                
+                if (!data || data.length === 0) {
+                    tableBody.innerHTML =
+                        `<tr><td colspan="${headersList.length + 1}" style="text-align:center;color:#94a3b8;padding:2.5rem 1rem;">No rows to display</td></tr>`;
+                    return;
+                }
+
+                let bodyHtml = '';
+                data.forEach(row => {
+                    const valid = row._valid === true;
+                    const missingFields = row._missing || [];
+                    const statusText = valid ? '✅ Valid' : (missingFields.length > 0 ? '⚠️ Missing' : '❌ Invalid');
+                    const statusClass = valid ? 'valid' : 'missing';
+
+                    bodyHtml += '<tr>';
+                    bodyHtml += `<td><span class="status-badge ${statusClass}">${statusText}</span></td>`;
+                    headersList.forEach(h => {
+                        const val = row[h] !== undefined && row[h] !== null ? String(row[h]) : '';
+                        const isMissing = missingFields.some(m => normalize(m) === normalize(h));
+                        const displayVal = val || '—';
+                        if (isMissing) {
+                            bodyHtml += `<td class="cell-missing">${displayVal}</td>`;
+                        } else {
+                            bodyHtml += `<td>${displayVal}</td>`;
+                        }
+                    });
+                    bodyHtml += '</tr>';
+                });
+                tableBody.innerHTML = bodyHtml;
+            }
+
+           
+            function processRows(rows, headerList) {
+            
+                const headerMap = {};
+                headerList.forEach(h => {
+                    headerMap[normalize(h)] = h;
+                });
+
+                const requiredNorm = REQUIRED.map(normalize);
+
+                const processed = rows.map((row, idx) => {
+                    const obj = {};
+                    const missing = [];
+
+                   
+                    headerList.forEach(h => {
+                        obj[h] = row[h] !== undefined && row[h] !== null ? row[h] : '';
+                    });
+
+                  
+                    requiredNorm.forEach(req => {
+                        const origKey = headerMap[req];
+                        if (!origKey) {
+                           
+                            missing.push(req);
+                        } else {
+                            const val = row[origKey];
+                            if (val === undefined || val === null || String(val).trim() === '') {
+                                missing.push(origKey);
+                            }
+                        }
+                    });
+
+                  
+                    REQUIRED.forEach(req => {
+                        const found = headerList.some(h => normalize(h) === normalize(req));
+                        if (!found) {
+                          
+                            if (!missing.some(m => normalize(m) === normalize(req))) {
+                                missing.push(req);
+                            }
+                        }
+                    });
+
+                    obj._valid = missing.length === 0;
+                    obj._missing = missing;
+                    return obj;
+                });
+
+                return processed;
+            }
+
+        
+            function parseFile(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+
+                            // Get first sheet
+                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const json = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+
+                            if (!json || json.length === 0) {
+                                reject(new Error('The file appears to be empty.'));
+                                return;
+                            }
+
+                          
+                            const headers = Object.keys(json[0]);
+                            if (headers.length === 0) {
+                                reject(new Error('No columns found in the file.'));
+                                return;
+                            }
+
+                            
+                            const processed = processRows(json, headers);
+                            resolve({ headers, rows: processed });
+                        } catch (err) {
+                            reject(new Error('Failed to parse file: ' + err.message));
+                        }
+                    };
+                    reader.onerror = function() {
+                        reject(new Error('Failed to read file.'));
+                    };
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+
+           
+            function updateUI(headersList, rows) {
+                parsedData = rows;
+                headers = headersList;
+
+                renderTable(rows, headersList);
+
+                // Stats
+                const total = rows.length;
+                const validCount = rows.filter(r => r._valid === true).length;
+                const invalidCount = total - validCount;
+                totalRows.textContent = total;
+                validRows.textContent = validCount;
+                invalidRows.textContent = invalidCount;
+                statsBar.classList.add('show');
+
+                
+                importBtn.disabled = false;
+                importBtn.textContent = '⬆ Save (mock)';
+            }
+
+            
+            function showSummary(total, valid, invalid) {
+                summaryTotal.textContent = total;
+                summaryValid.textContent = valid;
+                summaryInvalid.textContent = invalid;
+
+                if (invalid === 0 && total > 0) {
+                    summaryTitle.textContent = '🎉 All rows are valid!';
+                    summaryDesc.textContent = 'All business entries passed validation and are ready.';
+                } else if (total === 0) {
+                    summaryTitle.textContent = 'ℹ️ No rows imported';
+                    summaryDesc.textContent = 'The file did not contain any data rows.';
+                } else {
+                    summaryTitle.textContent = '⚠️ Some rows have issues';
+                    summaryDesc.textContent = `${invalid} row(s) are missing required fields (Name, Category, City).`;
+                }
+
+                summaryBox.classList.add('show');
+            }
+
+           
+            function resetAll(keepFileInput = false) {
+            
+                parsedData = [];
+                headers = [];
+                currentFile = null;
+
+                tableHead.innerHTML = '';
+                tableBody.innerHTML =
+                    `<tr><td colspan="10" style="text-align:center;color:#94a3b8;padding:2.5rem 1rem;">Upload a file to preview rows</td></tr>`;
+
+               
+                statsBar.classList.remove('show');
+                summaryBox.classList.remove('show');
+
+               
+                importBtn.disabled = true;
+                importBtn.textContent = '⬆ Import & Preview';
+
+                
+                fileInfo.classList.remove('show');
+                fileName.textContent = '';
+                fileExt.textContent = '';
+                fileSize.textContent = '';
+
+                if (!keepFileInput) {
+                    fileInput.value = '';
+                }
+            }
+
+            
+            function handleFile(file) {
+                if (!file) {
+                    resetAll();
+                    return;
+                }
+
+              
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (!['xlsx', 'xls', 'csv'].includes(ext)) {
+                    alert('Please select a .xlsx, .xls, or .csv file.');
+                    resetAll();
+                    return;
+                }
+
+                currentFile = file;
+
+                
+                fileName.textContent = file.name;
+                fileExt.textContent = ext.toUpperCase();
+                fileSize.textContent = formatFileSize(file.size);
+                fileInfo.classList.add('show');
+
+               
+                statsBar.classList.remove('show');
+                summaryBox.classList.remove('show');
+                importBtn.disabled = true;
+                importBtn.textContent = '⬆ Import & Preview';
+
+              
+                parseFile(file)
+                    .then(({ headers, rows }) => {
+                        updateUI(headers, rows);
+                    })
+                    .catch(err => {
+                        alert('Error parsing file: ' + err.message);
+                        resetAll();
+                    });
+            }
+
+            
+            fileInput.addEventListener('change', function(e) {
+                if (this.files && this.files.length > 0) {
+                    handleFile(this.files[0]);
+                } else {
+                    resetAll();
+                }
+            });
+
+            uploadZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dragover');
+            });
+
+            uploadZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+            });
+
+            uploadZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files && files.length > 0) {
+                    const file = files[0];
+                
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    fileInput.files = dataTransfer.files;
+                    handleFile(file);
+                }
+            });
+
+           
+            clearFileBtn.addEventListener('click', function() {
+                resetAll();
+                fileInput.value = '';
+                currentFile = null;
+            });
+
+        
+            importBtn.addEventListener('click', function() {
+                if (parsedData.length === 0) {
+                    alert('No data to import. Please upload a file first.');
+                    return;
+                }
+
+                const total = parsedData.length;
+                const valid = parsedData.filter(r => r._valid === true).length;
+                const invalid = total - valid;
+
+               
+                showSummary(total, valid, invalid);
+
+              
+                if (valid > 0) {
+                    const validRowsData = parsedData.filter(r => r._valid === true);
+                    console.log('✅ [MOCK SAVE] Valid business rows:', validRowsData);
+                }
+                if (invalid > 0) {
+                    const invalidRowsData = parsedData.filter(r => r._valid === false);
+                    console.warn('⚠️ [MOCK SAVE] Rows with issues (skipped):', invalidRowsData);
+                }
+
+             
+                importBtn.disabled = true;
+                importBtn.textContent = '✅ Saved';
+                setTimeout(() => {
+                    importBtn.disabled = false;
+                    importBtn.textContent = '⬆ Save (mock)';
+                }, 2000);
+            });
+
+            
+            dismissSummaryBtn.addEventListener('click', function() {
+                summaryBox.classList.remove('show');
+            });
+
+           
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    summaryBox.classList.remove('show');
+                }
+            });
+
+            
+            resetAll();
+
+            
+            window.__importPanel = {
+                parseFile,
+                resetAll,
+                parsedData: () => parsedData,
+                headers: () => headers,
+            };
+
+        })();
+    </script>
+
+</body>
+</html>
