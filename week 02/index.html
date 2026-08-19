@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SafeX Solutions | Business Directory Import Panel</title>
+    <meta name="description" content="Safely import, validate, and manage business directory data with SafeX Solutions' intelligent import panel." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>" />
+
+    <!-- SheetJS for Excel/CSV parsing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js">
+    </script>
+
+    <style>
+        /* ============================================================
+                   CSS VARIABLES & RESET
+                   ============================================================ */
+        :root {
+            --navy: #0f1a2f;
+            --navy-light: #1a2d4a;
+            --blue: #2a7de1;
+            --blue-hover: #1e62b5;
+            --blue-light: #e8f0fe;
+            --white: #ffffff;
+            --gray-100: #f8f9fc;
+            --gray-200: #e9edf4;
+            --gray-300: #d0d7e2;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --green: #22a65e;
+            --green-bg: #e6f7ee;
+            --red: #dc3545;
+            --red-bg: #fde8ea;
+            --yellow: #f59e0b;
+            --yellow-bg: #fef3d7;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+            --radius: 12px;
+            --radius-sm: 6px;
+            --transition: 0.2s ease;
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--gray-100);
+            color: var(--gray-800);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* ============================================================
+                   APP CONTAINER
+                   ============================================================ */
+        .app {
+            max-width: 1360px;
+            width: 100%;
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            padding: 28px 32px 40px;
+            transition: padding 0.2s;
+        }
+
+        @media (max-width: 768px) {
+            .app {
+                padding: 16px 14px 28px;
+            }
+            body {
+                padding: 10px;
+            }
+        }
+
+        /* ============================================================
+                   HEADER / BRANDING
+                   ============================================================ */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--gray-200);
+            margin-bottom: 28px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-logo {
+            width: 44px;
+            height: 44px;
+            background: var(--navy);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(15, 26, 47, 0.2);
+        }
+
+        .brand-text h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--navy);
+            letter-spacing: -0.3px;
+            line-height: 1.2;
+        }
+
+        .brand-text span {
+            font-size: 13px;
+            color: var(--gray-500);
+            font-weight: 500;
+            display: block;
+            letter-spacing: 0.2px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .badge-version {
+            background: var(--blue-light);
+            color: var(--blue);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 14px;
+            border-radius: 20px;
+            letter-spacing: 0.3px;
+        }
+
+        /* ============================================================
+                   STATS CARDS
+                   ============================================================ */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            padding: 16px 14px 14px;
+            text-align: center;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-card:hover {
+            border-color: var(--gray-300);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-card .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.2;
+        }
+
+        .stat-card .stat-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        .stat-card.stat-valid .stat-value {
+            color: var(--green);
+        }
+        .stat-card.stat-duplicate .stat-value {
+            color: var(--yellow);
+        }
+        .stat-card.stat-error .stat-value {
+            color: var(--red);
+        }
+        .stat-card.stat-imported .stat-value {
+            color: var(--blue);
+        }
+
+        /* ============================================================
+                   ACTION BUTTONS
+                   ============================================================ */
+        .actions-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            color: var(--white);
+            background: var(--gray-200);
+            color: var(--gray-700);
+            box-shadow: var(--shadow-sm);
+            white-space: nowrap;
+            font-family: var(--font);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .btn:focus-visible {
+            outline: 3px solid var(--blue);
+            outline-offset: 2px;
+        }
+
+        .btn-primary {
+            background: var(--blue);
+            color: var(--white);
+        }
+        .btn-primary:hover {
+            background: var(--blue-hover);
+        }
+
+        .btn-success {
+            background: var(--green);
+            color: var(--white);
+        }
+        .btn-success:hover {
+            background: #1a8a4a;
+        }
+
+        .btn-danger {
+            background: var(--red);
+            color: var(--white);
+        }
+        .btn-danger:hover {
+            background: #b02a37;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--gray-700);
+            border: 1.5px solid var(--gray-300);
+            box-shadow: none;
+        }
+        .btn-outline:hover {
+            border-color: var(--gray-400);
+            background: var(--gray-100);
+        }
+
+        .btn-outline-primary {
+            background: transparent;
+            color: var(--blue);
+            border: 1.5px solid var(--blue);
+            box-shadow: none;
+        }
+        .btn-outline-primary:hover {
+            background: var(--blue-light);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: var(--shadow-sm) !important;
+        }
+
+        .btn .icon {
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        @media (max-width: 600px) {
+            .actions-bar .btn {
+                flex: 1 1 100%;
+                justify-content: center;
+                padding: 12px 16px;
+            }
+            .actions-bar {
+                flex-direction: column;
+            }
+        }
+
+        /* ============================================================
+                   UPLOAD AREA
+                   ============================================================ */
+        .upload-area {
+            border: 2px dashed var(--gray-300);
+            border-radius: var(--radius);
+            padding: 40px 24px;
+            text-align: center;
+            transition: var(--transition);
+            background: var(--gray-100);
+            margin-bottom: 24px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .upload-area:hover,
+        .upload-area.dragover {
+            border-color: var(--blue);
+            background: var(--blue-light);
+        }
+
+        .upload-area .upload-icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .upload-area h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--navy);
+            margin-bottom: 4px;
+        }
+
+        .upload-area p {
+            color: var(--gray-500);
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .upload-area .btn {
+            display: inline-flex;
+        }
+
+        .upload-area input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .upload-area .file-info {
+            margin-top: 12px;
+            font-size: 14px;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .upload-area .file-info .file-name {
+            color: var(--blue);
+            font-weight: 600;
+        }
+
+        /* ============================================================
+                   NOTIFICATIONS
+                   ============================================================ */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 420px;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        .notification {
+            background: var(--white);
+            border-radius: var(--radius-sm);
+            padding: 16px 20px;
+            box-shadow: var(--shadow-lg);
+            border-left: 5px solid var(--gray-300);
+            pointer-events: auto;
+            animation: slideIn 0.3s ease;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .notification-success {
+            border-left-color: var(--green);
+        }
+        .notification-error {
+            border-left-color: var(--red);
+        }
+        .notification-info {
+            border-left-color: var(--blue);
+        }
+
+        .notification .notif-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .notification .notif-content {
+            flex: 1;
+        }
+        .notification .notif-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--gray-800);
+        }
+        .notification .notif-message {
+            font-size: 13px;
+            color: var(--gray-600);
+            margin-top: 2px;
+        }
+        .notification .notif-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: var(--gray-400);
+            padding: 0 0 0 8px;
+            flex-shrink: 0;
+            line-height: 1;
+            transition: var(--transition);
+        }
+        .notification .notif-close:hover {
+            color: var(--gray-700);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .notification-container {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+                width: auto;
+            }
+        }
+
+        /* ============================================================
+                   PREVIEW TABLE
+                   ============================================================ */
+        .preview-section {
+            margin-top: 8px;
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .preview-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--navy);
+        }
+
+        .preview-header .row-count {
+            font-size: 14px;
+            color: var(--gray-500);
+            background: var(--gray-100);
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--gray-200);
+            background: var(--white);
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            min-width: 700px;
+        }
+
+        .preview-table thead {
+            background: var(--gray-100);
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .preview-table th {
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--gray-600);
+            position: sticky;
+            top: 0;
+            background: var(--gray-100);
+            z-index: 2;
+            white-space: nowrap;
+        }
+
+        .preview-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--gray-200);
+            vertical-align: middle;
+            word-break: break-word;
+            max-width: 200px;
+        }
+
+        .preview-table tbody tr {
+            transition: var(--transition);
+        }
+        .preview-table tbody tr:hover {
+            background: var(--gray-100);
+        }
+
+        /* Row status indicators */
+        .preview-table td .status-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .status-badge.valid {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+        .status-badge.invalid {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+        .status-badge.duplicate {
+            background: var(--yellow-bg);
+            color: #b45309;
+        }
+        .status-badge.skipped {
+            background: var(--gray-200);
+            color: var(--gray-600);
+        }
+
+        /* Cell validation states */
+        .preview-table td.cell-error {
+            background: var(--red-bg);
+            border-left: 3px solid var(--red);
+        }
+        .preview-table td.cell-valid {
+            background: var(--green-bg);
+            border-left: 3px solid var(--green);
+        }
+        .preview-table td.cell-duplicate {
+            background: var(--yellow-bg);
+            border-left: 3px solid var(--yellow);
+        }
+
+        .preview-table td .cell-error-msg {
+            display: block;
+            font-size: 11px;
+            color: var(--red);
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        .preview-table td .cell-valid-icon {
+            color: var(--green);
+            margin-right: 4px;
+        }
+
+        .preview-table td .cell-duplicate-icon {
+            color: #b45309;
+            margin-right: 4px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--gray-500);
+        }
+        .empty-state .empty-icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 12px;
+        }
+        .empty-state h3 {
+            font-size: 18px;
+            color: var(--gray-700);
+            margin-bottom: 4px;
+        }
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        /* ============================================================
+                   SUMMARY SECTION
+                   ============================================================ */
+        .summary-section {
+            margin-top: 20px;
+            padding: 18px 20px;
+            background: var(--gray-100);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--gray-200);
+            display: none;
+        }
+
+        .summary-section.visible {
+            display: block;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .summary-item {
+            background: var(--white);
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            text-align: center;
+            border: 1px solid var(--gray-200);
+        }
+
+        .summary-item .summary-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .summary-item .summary-label {
+            font-size: 11px;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            font-weight: 500;
+        }
+
+        /* ============================================================
+                   LOADING OVERLAY
+                   ============================================================ */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 9998;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--gray-200);
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-overlay p {
+            font-weight: 500;
+            color: var(--gray-700);
+            font-size: 16px;
+        }
+
+        /* ============================================================
+                   RESPONSIVE TWEAKS
+                   ============================================================ */
+        @media (max-width: 768px) {
+            .brand-text h1 {
+                font-size: 18px;
+            }
+            .brand-logo {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            .stat-card .stat-value {
+                font-size: 22px;
+            }
+            .stat-card {
+                padding: 12px 8px;
+            }
+            .preview-table {
+                font-size: 13px;
+                min-width: 600px;
+            }
+            .preview-table th,
+            .preview-table td {
+                padding: 8px 10px;
+            }
+            .summary-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .brand-text h1 {
+                font-size: 16px;
+            }
+            .brand-text span {
+                font-size: 11px;
+            }
+            .upload-area {
+                padding: 28px 16px;
+            }
+            .upload-area .upload-icon {
+                font-size: 36px;
+            }
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+            .header-actions {
+                justify-content: flex-start;
+            }
+        }
+
+        /* ============================================================
+                   SCROLLBAR STYLING
+                   ============================================================ */
+        .table-wrapper::-webkit-scrollbar {
+            height: 8px;
+        }
+        .table-wrapper::-webkit-scrollbar-track {
+            background: var(--gray-100);
+            border-radius: 4px;
+        }
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: var(--gray-300);
+            border-radius: 4px;
+        }
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: var(--gray-400);
+        }
+
+        /* ============================================================
+                   UTILITY
+                   ============================================================ */
+        .hidden {
+            display: none !important;
+        }
+        .text-muted {
+            color: var(--gray-500);
+        }
+        .mt-8 {
+            margin-top: 8px;
+        }
+        .mb-8 {
+            margin-bottom: 8px;
+        }
+        .flex-center {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .gap-4 {
+            gap: 4px;
+        }
+
+        /* ============================================================
+                   ACCESSIBILITY: FOCUS VISIBLE
+                   ============================================================ */
+        :focus-visible {
+            outline: 3px solid var(--blue);
+            outline-offset: 2px;
+        }
+
+        /* ============================================================
+                   PRINT STYLES
+                   ============================================================ */
+        @media print {
+            .btn,
+            .upload-area,
+            .actions-bar {
+                display: none !important;
+            }
+            .app {
+                box-shadow: none !important;
+                padding: 16px !important;
+            }
+            .preview-table {
+                font-size: 11px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================================
+    LOADING OVERLAY
+    ============================================================ -->
+    <div class="loading-overlay" id="loadingOverlay" role="status" aria-live="polite">
+        <div class="spinner"></div>
+        <p id="loadingMessage">Processing...</p>
+    </div>
+
+    <!-- ============================================================
+    NOTIFICATION CONTAINER
+    ============================================================ -->
+    <div class="notification-container" id="notificationContainer" role="alert" aria-live="polite"></div>
+
+    <!-- ============================================================
+    MAIN APP
+    ============================================================ -->
+    <div class="app" role="main">
+
+        <!-- HEADER -->
+        <header class="header" role="banner">
+            <div class="brand">
+                <div class="brand-logo" aria-hidden="true">SX</div>
+                <div class="brand-text">
+                    <h1>SafeX Solutions</h1>
+                    <span>Business Directory Import Panel</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span class="badge-version">v2.0</span>
+            </div>
+        </header>
+
+        <!-- STATS CARDS -->
+        <section class="stats-grid" aria-label="Import statistics">
+            <div class="stat-card">
+                <div class="stat-value" id="statTotal">0</div>
+                <div class="stat-label">Total Rows</div>
+            </div>
+            <div class="stat-card stat-valid">
+                <div class="stat-value" id="statValid">0</div>
+                <div class="stat-label">Valid Rows</div>
+            </div>
+            <div class="stat-card stat-duplicate">
+                <div class="stat-value" id="statDuplicates">0</div>
+                <div class="stat-label">Duplicates</div>
+            </div>
+            <div class="stat-card stat-error">
+                <div class="stat-value" id="statErrors">0</div>
+                <div class="stat-label">Errors</div>
+            </div>
+            <div class="stat-card stat-imported">
+                <div class="stat-value" id="statImported">0</div>
+                <div class="stat-label">Imported</div>
+            </div>
+        </section>
+
+        <!-- ACTION BUTTONS -->
+        <div class="actions-bar" role="toolbar" aria-label="Import actions">
+            <button class="btn btn-primary" id="btnUpload" aria-label="Upload a file">
+                <span class="icon">📂</span> Upload File
+            </button>
+            <button class="btn btn-outline-primary" id="btnValidate" disabled aria-label="Validate data">
+                <span class="icon">✅</span> Validate Data
+            </button>
+            <button class="btn btn-success" id="btnImport" disabled aria-label="Import valid rows">
+                <span class="icon">📥</span> Import Valid Rows
+            </button>
+            <button class="btn btn-outline" id="btnUndo" disabled aria-label="Undo last import">
+                <span class="icon">↩️</span> Undo Last Import
+            </button>
+            <button class="btn btn-outline" id="btnDownloadSummary" disabled aria-label="Download import summary">
+                <span class="icon">📊</span> Download Summary
+            </button>
+        </div>
+
+        <!-- UPLOAD AREA -->
+        <section class="upload-area" id="uploadArea" aria-label="File upload zone">
+            <span class="upload-icon" aria-hidden="true">📁</span>
+            <h3>Drop your file here</h3>
+            <p>Supports <strong>.xlsx</strong>, <strong>.xls</strong>, and <strong>.csv</strong></p>
+            <button class="btn btn-primary" type="button">Choose File</button>
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" aria-label="Upload business directory file" />
+            <div class="file-info" id="fileInfo">
+                <span class="file-name" id="fileName">No file selected</span>
+            </div>
+        </section>
+
+        <!-- PREVIEW TABLE -->
+        <section class="preview-section" aria-label="Data preview">
+            <div class="preview-header">
+                <h2>Data Preview</h2>
+                <span class="row-count" id="rowCount">0 rows</span>
+            </div>
+            <div class="table-wrapper">
+                <table class="preview-table" id="previewTable" role="table">
+                    <thead id="tableHead">
+                        <tr>
+                            <th>#</th>
+                            <th>Business Name</th>
+                            <th>City</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <span class="empty-icon" aria-hidden="true">📋</span>
+                                    <h3>No data loaded</h3>
+                                    <p>Upload an Excel or CSV file to preview your business directory.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- SUMMARY SECTION -->
+        <section class="summary-section" id="summarySection" aria-label="Import summary">
+            <h3 style="font-size:16px; font-weight:600; color:var(--navy);">📊 Import Summary</h3>
+            <div class="summary-grid" id="summaryGrid">
+                <div class="summary-item">
+                    <div class="summary-value" id="sumTotal">0</div>
+                    <div class="summary-label">Total Rows</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="sumImported" style="color:var(--green);">0</div>
+                    <div class="summary-label">Imported</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="sumSkipped" style="color:var(--gray-500);">0</div>
+                    <div class="summary-label">Skipped</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="sumDuplicates" style="color:#b45309;">0</div>
+                    <div class="summary-label">Duplicates</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="sumErrors" style="color:var(--red);">0</div>
+                    <div class="summary-label">Validation Errors</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer style="margin-top:32px; padding-top:16px; border-top:1px solid var(--gray-200); font-size:13px; color:var(--gray-400); text-align:center;">
+            &copy; 2026 SafeX Solutions &mdash; Built with ❤️ for secure business directory management.
+        </footer>
+    </div>
+
+    <!-- ============================================================
+    JAVASCRIPT
+    ============================================================ -->
+    <script>
+        (function() {
+            'use strict';
+
+            // ============================================================
+            // STATE
+            // ============================================================
+            const state = {
+                // All successfully imported businesses (persistent)
+                importedBusinesses: [],
+                // Snapshot of importedBusinesses before the most recent import (for undo)
+                lastImportSnapshot: [],
+                // Data from the currently uploaded file (parsed)
+                currentFileData: [],
+                // Validation results per row: { rowIndex, fieldErrors: { field: message }, isValid }
+                validationResults: [],
+                // Duplicate flags per row: boolean
+                duplicateFlags: [],
+                // Has the current file been validated?
+                isValidated: false,
+                // Is the current file being processed?
+                isProcessing: false,
+                // Import summary for the current batch
+                lastSummary: null,
+            };
+
+            // ============================================================
+            // DOM REFS
+            // ============================================================
+            const $ = (sel) => document.querySelector(sel);
+            const $$ = (sel) => document.querySelectorAll(sel);
+
+            const fileInput = $('#fileInput');
+            const uploadArea = $('#uploadArea');
+            const fileName = $('#fileName');
+            const tableBody = $('#tableBody');
+            const tableHead = $('#tableHead');
+            const rowCount = $('#rowCount');
+
+            const statTotal = $('#statTotal');
+            const statValid = $('#statValid');
+            const statDuplicates = $('#statDuplicates');
+            const statErrors = $('#statErrors');
+            const statImported = $('#statImported');
+
+            const btnUpload = $('#btnUpload');
+            const btnValidate = $('#btnValidate');
+            const btnImport = $('#btnImport');
+            const btnUndo = $('#btnUndo');
+            const btnDownloadSummary = $('#btnDownloadSummary');
+
+            const summarySection = $('#summarySection');
+            const sumTotal = $('#sumTotal');
+            const sumImported = $('#sumImported');
+            const sumSkipped = $('#sumSkipped');
+            const sumDuplicates = $('#sumDuplicates');
+            const sumErrors = $('#sumErrors');
+
+            const loadingOverlay = $('#loadingOverlay');
+            const loadingMessage = $('#loadingMessage');
+            const notificationContainer = $('#notificationContainer');
+
+            // ============================================================
+            // NOTIFICATIONS
+            // ============================================================
+            function notify(title, message, type = 'info', duration = 4000) {
+                const icons = {
+                    success: '✅',
+                    error: '❌',
+                    info: 'ℹ️',
+                };
+                const el = document.createElement('div');
+                el.className = `notification notification-${type}`;
+                el.innerHTML = `
+              <span class="notif-icon" aria-hidden="true">${icons[type] || 'ℹ️'}</span>
+              <div class="notif-content">
+                <div class="notif-title">${title}</div>
+                <div class="notif-message">${message}</div>
+              </div>
+              <button class="notif-close" aria-label="Dismiss notification">&times;</button>
+            `;
+                el.querySelector('.notif-close').addEventListener('click', () => el.remove());
+                notificationContainer.appendChild(el);
+                setTimeout(() => {
+                    if (el.parentNode) el.remove();
+                }, duration);
+                return el;
+            }
+
+            // ============================================================
+            // LOADING OVERLAY
+            // ============================================================
+            function showLoading(msg = 'Processing...') {
+                loadingMessage.textContent = msg;
+                loadingOverlay.classList.add('active');
+                state.isProcessing = true;
+            }
+
+            function hideLoading() {
+                loadingOverlay.classList.remove('active');
+                state.isProcessing = false;
+            }
+
+            // ============================================================
+            // UTILITY HELPERS
+            // ============================================================
+            function normalize(str) {
+                return String(str || '').trim().toLowerCase().replace(/\s+/g, ' ');
+            }
+
+            function isValidEmail(email) {
+                const s = String(email || '').trim();
+                if (!s) return false;
+                // Basic but robust email regex
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+            }
+
+            function isValidPhone(phone) {
+                const s = String(phone || '').trim();
+                if (!s) return false;
+                // Allow digits, spaces, +, -, (, ), . and extensions
+                const cleaned = s.replace(/[\s\-\(\)\.\+]/g, '');
+                return cleaned.length >= 7 && /^[0-9]+$/.test(cleaned);
+            }
+
+            function escapeHtml(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            // ============================================================
+            // VALIDATION ENGINE
+            // ============================================================
+            function validateRow(row, index) {
+                const fields = ['Business Name', 'City', 'Email', 'Phone', 'Category'];
+                const fieldMap = {
+                    'Business Name': 'businessName',
+                    'City': 'city',
+                    'Email': 'email',
+                    'Phone': 'phone',
+                    'Category': 'category'
+                };
+                // Find column indexes
+                const headers = state.currentFileData.headers || [];
+                const colIdx = {};
+                fields.forEach(f => {
+                    const idx = headers.findIndex(h => normalize(h) === normalize(f));
+                    colIdx[f] = idx;
+                });
+
+                const getVal = (f) => {
+                    const idx = colIdx[f];
+                    if (idx === -1) return '';
+                    return String(row[idx] || '').trim();
+                };
+
+                const errors = {};
+                let isValid = true;
+
+                // Business Name
+                const biz = getVal('Business Name');
+                if (!biz) {
+                    errors['Business Name'] = 'Business Name is required';
+                    isValid = false;
+                }
+
+                // City
+                const city = getVal('City');
+                if (!city) {
+                    errors['City'] = 'City is required';
+                    isValid = false;
+                }
+
+                // Category
+                const cat = getVal('Category');
+                if (!cat) {
+                    errors['Category'] = 'Category is required';
+                    isValid = false;
+                }
+
+                // Email
+                const email = getVal('Email');
+                if (!email) {
+                    errors['Email'] = 'Email is required';
+                    isValid = false;
+                } else if (!isValidEmail(email)) {
+                    errors['Email'] = 'Invalid email format';
+                    isValid = false;
+                }
+
+                // Phone
+                const phone = getVal('Phone');
+                if (!phone) {
+                    errors['Phone'] = 'Phone is required';
+                    isValid = false;
+                } else if (!isValidPhone(phone)) {
+                    errors['Phone'] = 'Invalid phone format';
+                    isValid = false;
+                }
+
+                return {
+                    rowIndex: index,
+                    fieldErrors: errors,
+                    isValid,
+                    data: {
+                        businessName: biz,
+                        city: city,
+                        email: email,
+                        phone: phone,
+                        category: cat,
+                    }
+                };
+            }
+
+            function runValidation() {
+                const data = state.currentFileData.rows || [];
+                if (!data.length) {
+                    notify('No Data', 'Please upload a file first.', 'error');
+                    return;
+                }
+
+                showLoading('Validating data...');
+                setTimeout(() => {
+                    try {
+                        const results = data.map((row, i) => validateRow(row, i));
+                        state.validationResults = results;
+                        state.isValidated = true;
+
+                        // Count errors
+                        const errorCount = results.filter(r => !r.isValid).length;
+
+                        // Run duplicate detection
+                        detectDuplicates();
+
+                        // Update UI
+                        renderPreview();
+                        updateStats();
+                        updateButtons();
+
+                        if (errorCount === 0) {
+                            notify('Validation Complete', 'All rows are valid!', 'success');
+                        } else {
+                            notify('Validation Complete', `${errorCount} row(s) have validation errors.`, 'error');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        notify('Validation Error', 'An error occurred during validation.', 'error');
+                    } finally {
+                        hideLoading();
+                    }
+                }, 200);
+            }
+
+            // ============================================================
+            // DUPLICATE DETECTION
+            // ============================================================
+            function detectDuplicates() {
+                const results = state.validationResults;
+                if (!results.length) {
+                    state.duplicateFlags = [];
+                    return;
+                }
+
+                // Build a map of (normalized biz + city) -> count
+                const map = new Map();
+                results.forEach((r, idx) => {
+                    if (!r.isValid) return;
+                    const key = normalize(r.data.businessName) + '|' + normalize(r.data.city);
+                    if (!map.has(key)) map.set(key, []);
+                    map.get(key).push(idx);
+                });
+
+                const flags = new Array(results.length).fill(false);
+                for (const [key, indices] of map) {
+                    if (indices.length > 1) {
+                        indices.forEach(i => { flags[i] = true; });
+                    }
+                }
+                state.duplicateFlags = flags;
+            }
+
+            // ============================================================
+            // IMPORT ENGINE
+            // ============================================================
+            function importValidRows() {
+                const results = state.validationResults;
+                if (!results.length) {
+                    notify('No Data', 'Please upload and validate data first.', 'error');
+                    return;
+                }
+
+                const validRows = results.filter((r, idx) => {
+                    return r.isValid && !state.duplicateFlags[idx];
+                });
+
+                if (validRows.length === 0) {
+                    notify('Nothing to Import', 'No valid, non-duplicate rows found.', 'error');
+                    return;
+                }
+
+                // Save snapshot for undo
+                state.lastImportSnapshot = JSON.parse(JSON.stringify(state.importedBusinesses));
+
+                // Extract the business data from valid rows
+                const toImport = validRows.map(r => ({
+                    businessName: r.data.businessName,
+                    city: r.data.city,
+                    email: r.data.email,
+                    phone: r.data.phone,
+                    category: r.data.category,
+                }));
+
+                // Add to imported businesses
+                state.importedBusinesses = state.importedBusinesses.concat(toImport);
+
+                // Build summary
+                const total = results.length;
+                const imported = toImport.length;
+                const skipped = total - imported;
+                const duplicates = state.duplicateFlags.filter(f => f).length;
+                const errors = results.filter(r => !r.isValid).length;
+
+                state.lastSummary = { total, imported, skipped, duplicates, errors };
+
+                // Update UI
+                renderPreview();
+                updateStats();
+                updateButtons();
+                showSummary();
+
+                notify('Import Complete', `Successfully imported ${imported} business(es).`, 'success');
+                btnUndo.disabled = false;
+            }
+
+            // ============================================================
+            // UNDO LAST IMPORT
+            // ============================================================
+            function undoLastImport() {
+                if (!state.lastImportSnapshot) {
+                    notify('Nothing to Undo', 'No previous import to undo.', 'info');
+                    return;
+                }
+
+                state.importedBusinesses = JSON.parse(JSON.stringify(state.lastImportSnapshot));
+                state.lastImportSnapshot = null;
+                state.lastSummary = null;
+
+                renderPreview();
+                updateStats();
+                updateButtons();
+                summarySection.classList.remove('visible');
+                btnUndo.disabled = true;
+
+                notify('Undo Successful', 'Last import has been undone.', 'success');
+            }
+
+            // ============================================================
+            // DOWNLOAD SUMMARY CSV
+            // ============================================================
+            function downloadSummary() {
+                const summary = state.lastSummary;
+                if (!summary) {
+                    notify('No Summary', 'Please perform an import first.', 'error');
+                    return;
+                }
+
+                const lines = [
+                    'Metric,Count',
+                    `Total Rows,${summary.total}`,
+                    `Imported Rows,${summary.imported}`,
+                    `Skipped Rows,${summary.skipped}`,
+                    `Duplicate Rows,${summary.duplicates}`,
+                    `Validation Error Rows,${summary.errors}`,
+                ];
+                const csv = lines.join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'import-summary.csv';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+
+                notify('Downloaded', 'import-summary.csv has been downloaded.', 'success');
+            }
+
+            // ============================================================
+            // RENDER PREVIEW TABLE
+            // ============================================================
+            function renderPreview() {
+                const data = state.currentFileData.rows || [];
+                const headers = state.currentFileData.headers || ['Business Name', 'City', 'Email', 'Phone', 'Category'];
+                const results = state.validationResults;
+                const duplicates = state.duplicateFlags;
+
+                if (!data.length) {
+                    tableBody.innerHTML = `
+                <tr>
+                  <td colspan="7">
+                    <div class="empty-state">
+                      <span class="empty-icon" aria-hidden="true">📋</span>
+                      <h3>No data loaded</h3>
+                      <p>Upload an Excel or CSV file to preview your business directory.</p>
+                    </div>
+                  </td>
+                </tr>
+              `;
+                    rowCount.textContent = '0 rows';
+                    return;
+                }
+
+                // Build header
+                const headerFields = ['#', 'Business Name', 'City', 'Email', 'Phone', 'Category', 'Status'];
+                tableHead.innerHTML = `<tr>${headerFields.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr>`;
+
+                // Build rows
+                let html = '';
+                data.forEach((row, idx) => {
+                    const biz = String(row[0] || '').trim();
+                    const city = String(row[1] || '').trim();
+                    const email = String(row[2] || '').trim();
+                    const phone = String(row[3] || '').trim();
+                    const cat = String(row[4] || '').trim();
+
+                    const result = results[idx] || { isValid: true, fieldErrors: {} };
+                    const isDuplicate = duplicates[idx] || false;
+                    const isValid = result.isValid !== undefined ? result.isValid : true;
+                    const errors = result.fieldErrors || {};
+
+                    const statusClass = !isValid ? 'invalid' : (isDuplicate ? 'duplicate' : 'valid');
+                    const statusLabel = !isValid ? '❌ Error' : (isDuplicate ? '⚠️ Duplicate' : '✅ Valid');
+
+                    // Cell classes
+                    const cellClass = (field) => {
+                        if (errors[field]) return 'cell-error';
+                        if (isDuplicate) return 'cell-duplicate';
+                        return 'cell-valid';
+                    };
+
+                    const cellErrorMsg = (field) => {
+                        return errors[field] ? `<span class="cell-error-msg">${escapeHtml(errors[field])}</span>` : '';
+                    };
+
+                    const cellContent = (value, field) => {
+                        const cls = cellClass(field);
+                        const msg = cellErrorMsg(field);
+                        return `<td class="${cls}">${escapeHtml(value)}${msg}</td>`;
+                    };
+
+                    html += `<tr>`;
+                    html += `<td style="font-weight:600;color:var(--gray-500);">${idx + 1}</td>`;
+                    html += cellContent(biz, 'Business Name');
+                    html += cellContent(city, 'City');
+                    html += cellContent(email, 'Email');
+                    html += cellContent(phone, 'Phone');
+                    html += cellContent(cat, 'Category');
+                    html += `<td><span class="status-badge ${statusClass}">${statusLabel}</span></td>`;
+                    html += `</tr>`;
+                });
+
+                tableBody.innerHTML = html;
+                rowCount.textContent = `${data.length} rows`;
+            }
+
+            // ============================================================
+            // UPDATE STATS
+            // ============================================================
+            function updateStats() {
+                const data = state.currentFileData.rows || [];
+                const results = state.validationResults;
+                const duplicates = state.duplicateFlags || [];
+
+                const total = data.length;
+                const validCount = results.filter(r => r.isValid).length || 0;
+                const dupCount = duplicates.filter(f => f).length || 0;
+                const errCount = results.filter(r => !r.isValid).length || 0;
+                const imported = state.importedBusinesses.length;
+
+                statTotal.textContent = total;
+                statValid.textContent = validCount;
+                statDuplicates.textContent = dupCount;
+                statErrors.textContent = errCount;
+                statImported.textContent = imported;
+            }
+
+            // ============================================================
+            // UPDATE BUTTONS
+            // ============================================================
+            function updateButtons() {
+                const hasData = (state.currentFileData.rows || []).length > 0;
+                const hasResults = state.validationResults.length > 0;
+                const hasValid = state.validationResults.some(r => r.isValid);
+
+                btnValidate.disabled = !hasData;
+                btnImport.disabled = !(hasResults && hasValid);
+                btnDownloadSummary.disabled = !state.lastSummary;
+                // btnUndo is updated elsewhere
+            }
+
+            // ============================================================
+            // SHOW SUMMARY
+            // ============================================================
+            function showSummary() {
+                const s = state.lastSummary;
+                if (!s) {
+                    summarySection.classList.remove('visible');
+                    return;
+                }
+                sumTotal.textContent = s.total;
+                sumImported.textContent = s.imported;
+                sumSkipped.textContent = s.skipped;
+                sumDuplicates.textContent = s.duplicates;
+                sumErrors.textContent = s.errors;
+                summarySection.classList.add('visible');
+                btnDownloadSummary.disabled = false;
+            }
+
+            // ============================================================
+            // FILE HANDLING
+            // ============================================================
+            function handleFile(file) {
+                if (!file) return;
+
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (!['xlsx', 'xls', 'csv'].includes(ext)) {
+                    notify('Invalid File', 'Please upload .xlsx, .xls, or .csv files only.', 'error');
+                    return;
+                }
+
+                if (file.size === 0) {
+                    notify('Empty File', 'The file is empty. Please upload a non-empty file.', 'error');
+                    return;
+                }
+
+                showLoading('Reading file...');
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        let workbook;
+                        if (ext === 'csv') {
+                            const data = new Uint8Array(e.target.result);
+                            workbook = XLSX.read(data, { type: 'array', raw: true });
+                        } else {
+                            const data = new Uint8Array(e.target.result);
+                            workbook = XLSX.read(data, { type: 'array', raw: true });
+                        }
+
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const json = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+
+                        if (!json || json.length < 2) {
+                            hideLoading();
+                            notify('Empty Data', 'The file does not contain enough data (missing headers or rows).',
+                            'error');
+                            return;
+                        }
+
+                        // Headers: first row
+                        const headers = json[0].map(h => String(h || '').trim());
+                        // Data rows: rest
+                        const rows = json.slice(1).filter(row => {
+                            // Filter out completely empty rows
+                            return row.some(cell => String(cell || '').trim() !== '');
+                        });
+
+                        // Validate required columns
+                        const required = ['Business Name', 'City', 'Email', 'Phone', 'Category'];
+                        const headerNorm = headers.map(h => normalize(h));
+                        const missing = required.filter(r => !headerNorm.includes(normalize(r)));
+
+                        if (missing.length) {
+                            hideLoading();
+                            notify('Missing Columns',
+                                `Missing required columns: ${missing.join(', ')}. Please check your file.`, 'error');
+                            return;
+                        }
+
+                        // Store in state
+                        state.currentFileData = { headers, rows };
+                        state.validationResults = [];
+                        state.duplicateFlags = [];
+                        state.isValidated = false;
+
+                        // Reset validation state
+                        fileName.textContent = file.name;
+
+                        // Render preview
+                        renderPreview();
+                        updateStats();
+                        updateButtons();
+                        summarySection.classList.remove('visible');
+                        btnDownloadSummary.disabled = true;
+
+                        hideLoading();
+                        notify('File Loaded', `Loaded ${rows.length} rows from ${file.name}`, 'success');
+
+                        // Auto-validate
+                        runValidation();
+
+                    } catch (err) {
+                        console.error(err);
+                        hideLoading();
+                        notify('Parse Error', 'Failed to parse the file. Please check the format.', 'error');
+                    }
+                };
+
+                reader.onerror = function() {
+                    hideLoading();
+                    notify('Read Error', 'Failed to read the file. Please try again.', 'error');
+                };
+
+                if (ext === 'csv') {
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    reader.readAsArrayBuffer(file);
+                }
+            }
+
+            // ============================================================
+            // EVENT LISTENERS
+            // ============================================================
+
+            // File input
+            fileInput.addEventListener('change', function(e) {
+                if (this.files && this.files.length) {
+                    handleFile(this.files[0]);
+                }
+                this.value = '';
+            });
+
+            // Upload button triggers file input
+            btnUpload.addEventListener('click', function() {
+                fileInput.click();
+            });
+
+            // Drag and drop
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files && files.length) {
+                    handleFile(files[0]);
+                }
+            });
+
+            // Validate button
+            btnValidate.addEventListener('click', runValidation);
+
+            // Import button
+            btnImport.addEventListener('click', importValidRows);
+
+            // Undo button
+            btnUndo.addEventListener('click', undoLastImport);
+
+            // Download summary
+            btnDownloadSummary.addEventListener('click', downloadSummary);
+
+            // ============================================================
+            // SAMPLE DATA GENERATOR (for demo / testing)
+            // ============================================================
+            function generateSampleData() {
+                const sampleRows = [
+                    ['ABC Software', 'Islamabad', 'info@abcsoft.com', '051-1234567', 'Technology'],
+                    ['ABC Software', 'Islamabad', 'contact@abcsoft.com', '051-7654321', 'Technology'], // DUPLICATE
+                    ['ABC Software', 'Lahore', 'lahore@abcsoft.com', '042-9876543', 'Technology'],
+                    ['XYZ Solutions', 'Karachi', 'xyz@karachi.com', '021-4567890', 'Consulting'],
+                    ['Tech Hub', 'Islamabad', 'tech.hub@', '0333-1234567', 'IT'], // INVALID EMAIL
+                    ['Global Corp', 'Lahore', 'global@corp.com', '042', 'Business'], // INVALID PHONE
+                    ['', 'Rawalpindi', 'empty@biz.com', '051-1112222', 'Services'], // MISSING BUSINESS NAME
+                    ['Innovate Ltd', '', 'innovate@co.com', '021-3334444', 'Tech'], // MISSING CITY
+                    ['Future Systems', 'Karachi', 'future@sys.com', '021-5556666', ''], // MISSING CATEGORY
+                    ['SafeX Partners', 'Dubai', 'partners@safex.com', '+971-50-1234567', 'Consulting'],
+                    ['SafeX Partners', 'Dubai', 'info@safex.com', '+971-50-7654321', 'Consulting'], // DUPLICATE
+                    ['Alpha Tech', 'Peshawar', 'alpha@tech.com', '091-2223344', 'Technology'],
+                ];
+
+                const headers = ['Business Name', 'City', 'Email', 'Phone', 'Category'];
+
+                // Create a CSV string
+                let csv = headers.join(',') + '\n';
+                sampleRows.forEach(row => {
+                    csv += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',') + '\n';
+                });
+
+                // Create a Blob and trigger download
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'sample-businesses.csv';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+
+                notify('Sample Data', 'sample-businesses.csv has been downloaded.', 'success');
+            }
+
+            // Add a hidden button to generate sample data (for demo purposes)
+            // We'll add a keyboard shortcut: Ctrl+Shift+S
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.shiftKey && (e.key === 'S' || e.key === 's')) {
+                    e.preventDefault();
+                    generateSampleData();
+                }
+            });
+
+            // Also add a small "Sample Data" link in the upload area
+            const sampleLink = document.createElement('p');
+            sampleLink.style.marginTop = '8px';
+            sampleLink.style.fontSize = '13px';
+            sampleLink.innerHTML =
+                `📥 <a href="#" id="sampleDataLink" style="color:var(--blue);text-decoration:underline;cursor:pointer;">Download sample data</a> to test the import panel.`;
+            uploadArea.appendChild(sampleLink);
+
+            document.getElementById('sampleDataLink').addEventListener('click', function(e) {
+                e.preventDefault();
+                generateSampleData();
+            });
+
+            // ============================================================
+            // INIT
+            // ============================================================
+            function init() {
+                renderPreview();
+                updateStats();
+                updateButtons();
+                btnUndo.disabled = true;
+                btnDownloadSummary.disabled = true;
+                summarySection.classList.remove('visible');
+
+                console.log('🛡️ SafeX Solutions Import Panel ready.');
+                console.log('📥 Press Ctrl+Shift+S to download sample data.');
+            }
+
+            init();
+
+            // ============================================================
+            // EXPOSE STATE FOR DEBUGGING (optional)
+            // ============================================================
+            window.__safex = {
+                state,
+                notify,
+                generateSampleData,
+                runValidation,
+                importValidRows,
+                undoLastImport,
+                downloadSummary,
+            };
+
+        })();
+    </script>
+
+</body>
+</html>
